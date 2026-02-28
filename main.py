@@ -29,7 +29,8 @@ def shorten_url(request: Request, url: Annotated[str, Form()]):
         data = ShortenFormData(url=HttpUrl(url))
         code_id = len(urls) + 1
         urls[code_id] = data.url
-        return {"id": code_id}
+        return templates.TemplateResponse(request=request, name="code.html",
+                                          context={"code_id": code_id})
     except ValidationError:
         return templates.TemplateResponse(request=request, name="index.html",
                                           context={"error": "Invalid URL. Please enter a valid URL."})
