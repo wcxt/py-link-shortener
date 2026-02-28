@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 urls = {}
 app = FastAPI()
 
 class CodeCreate(BaseModel):
-    url: str
+    url: HttpUrl
 
 @app.get("/")
 def read_root():
