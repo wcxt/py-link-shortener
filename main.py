@@ -12,6 +12,11 @@ templates = Jinja2Templates(directory="templates")
 class ShortenFormData(BaseModel):
     url: HttpUrl
 
+@app.exception_handler(status.HTTP_404_NOT_FOUND)
+def http_not_found_exception_handler(request, exc):
+    return templates.TemplateResponse(request=request, name="404_global.html",
+                                      status_code=status.HTTP_404_NOT_FOUND)
+
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
