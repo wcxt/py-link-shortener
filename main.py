@@ -1,6 +1,6 @@
 from typing import Annotated
-from fastapi import FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, Form, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
 
@@ -30,10 +30,11 @@ def shorten_url(request: Request, url: Annotated[str, Form()]):
                                           context={"error": "Invalid URL. Please enter a valid URL."},
                                           status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
 
-@app.get("/{code_id}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
-def redirect_code(code_id: int):
+@app.get("/{code_id:int}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
+def redirect_code(request: Request, code_id: int):
     if code_id not in urls:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Code not found")
+        return templates.TemplateResponse(request=request, name="404.html",
+                                          status_code=status.HTTP_404_NOT_FOUND)
 
     return urls[code_id]
 
