@@ -1,11 +1,39 @@
+from contextlib import asynccontextmanager
+import os
 from typing import Annotated
-from fastapi import FastAPI, Form, Request, status
+from fastapi import Depends, FastAPI, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
+from sqlmodel import Session, create_engine, SQLModel
+
+postgres_url = os.getenv("POSTGRES_URL")
+if not postgres_url:
+    print("POSTGRES_URL environment variable required")
+    exit(1)
+engine = create_engine(postgres_url)
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+
+# This is a generator which will
+# - 1. return new session with first .next()
+# - 2. close session with second .next()
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+SessionDep = Annotated[Session, Depends(get_session)]
+
+# This is just a function which is essentialy a python context manager but async
+# We can use it like this: async with lifespan(app): 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
 
 urls = {}
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 templates = Jinja2Templates(directory="templates")
 
