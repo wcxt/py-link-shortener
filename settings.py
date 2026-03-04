@@ -1,0 +1,20 @@
+from pydantic import PostgresDsn, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class Settings(BaseSettings):
+    postgres_url: PostgresDsn
+
+    @field_validator("postgres_url", mode='after')
+    @classmethod
+    def is_db(cls, postgres_url: PostgresDsn):
+        path = postgres_url.path or ""
+        db_name = path.lstrip("/")
+        if not db_name:
+            raise ValueError("Postgres URL must include a database name")
+        return postgres_url
+
+    model_config = SettingsConfigDict(env_file=".env") # pyright: ignore[reportUnannotatedClassAttribute]
+
+settings = Settings() # pyright:ignore[reportCallIssue] 
+
+
