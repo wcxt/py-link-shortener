@@ -1,11 +1,20 @@
+from contextlib import asynccontextmanager
 from typing import Annotated
 from fastapi import FastAPI, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
+from database import create_db_and_tables
+
+# This is just a function which is essentialy a python context manager but async
+# We can use it like this: async with lifespan(app): 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
 
 urls = {}
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 templates = Jinja2Templates(directory="templates")
 
