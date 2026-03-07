@@ -1,9 +1,13 @@
 from typing import Annotated
 from fastapi import Depends
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine, Field
 from settings import settings
 
-engine = create_engine(str(settings.postgres_url))
+class ShortenedURL(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    url: str = Field(max_length=2048)
+
+engine = create_engine(str(settings.postgres_url), echo=True)
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
