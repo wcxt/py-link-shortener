@@ -4,7 +4,6 @@ from fastapi import FastAPI, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
-from sqlmodel import select
 from database import SessionDep, ShortenedURL, create_db_and_tables
 
 # This is just a function which is essentialy a python context manager but async
@@ -14,12 +13,11 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     yield
 
-urls = {}
 app = FastAPI(lifespan=lifespan)
 
 templates = Jinja2Templates(directory="templates")
 
-class ShortenFormData(BaseModel):
+class ShortenedURLCreate(BaseModel):
     url: HttpUrl
 
 @app.exception_handler(status.HTTP_404_NOT_FOUND)
@@ -34,18 +32,19 @@ def read_root(request: Request):
 @app.post("/", response_class=HTMLResponse)
 def shorten_url(request: Request, url: Annotated[str, Form()], session: SessionDep):
     try:
-        data = ShortenFormData(url=HttpUrl(url))
-        short_url_db = ShortenedURL(url=str(data.url))
-        session.add(short_url_db)
-        session.commit()
-        session.refresh(short_url_db)
-        return templates.TemplateResponse(request=request, name="code.html",
-                                          context={"code_id": short_url_db.id},
-                                          status_code=status.HTTP_201_CREATED)
+        data = ShortenedURLCreate.model_validate({url: url})
     except ValidationError:
         return templates.TemplateResponse(request=request, name="index.html",
                                           context={"error": "Invalid URL. Please enter a valid URL."},
                                           status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+
+    short_url_db = ShortenedURL(url=str(data.url))
+    session.add(short_url_db)
+    session.commit()
+    session.refresh(short_url_db)
+    return templates.TemplateResponse(request=request, name="code.html",
+                                      context={"code_id": short_url_db.id},
+                                      status_code=status.HTTP_201_CREATED)
 
 @app.get("/{code_id:int}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 def redirect_code(request: Request, code_id: int, session: SessionDep):
