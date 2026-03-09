@@ -4,7 +4,7 @@ from fastapi import FastAPI, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
-from database import create_db_and_tables
+from database import SessionDep, ShortenedURL, create_db_and_tables
 
 # This is just a function which is essentialy a python context manager but async
 # We can use it like this: async with lifespan(app): 
@@ -13,12 +13,11 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     yield
 
-urls = {}
 app = FastAPI(lifespan=lifespan)
 
 templates = Jinja2Templates(directory="templates")
 
-class ShortenFormData(BaseModel):
+class ShortenedURLCreate(BaseModel):
     url: HttpUrl
 
 @app.exception_handler(status.HTTP_404_NOT_FOUND)
@@ -31,25 +30,29 @@ def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
 @app.post("/", response_class=HTMLResponse)
-def shorten_url(request: Request, url: Annotated[str, Form()]):
+def shorten_url(request: Request, url: Annotated[str, Form()], session: SessionDep):
     try:
-        data = ShortenFormData(url=HttpUrl(url))
-        code_id = len(urls) + 1
-        urls[code_id] = data.url
-        return templates.TemplateResponse(request=request, name="code.html",
-                                          context={"code_id": code_id},
-                                          status_code=status.HTTP_201_CREATED)
+        data = ShortenedURLCreate.model_validate({url: url})
     except ValidationError:
         return templates.TemplateResponse(request=request, name="index.html",
                                           context={"error": "Invalid URL. Please enter a valid URL."},
                                           status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
 
+    short_url_db = ShortenedURL(url=str(data.url))
+    session.add(short_url_db)
+    session.commit()
+    session.refresh(short_url_db)
+    return templates.TemplateResponse(request=request, name="code.html",
+                                      context={"code_id": short_url_db.id},
+                                      status_code=status.HTTP_201_CREATED)
+
 @app.get("/{code_id:int}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
-def redirect_code(request: Request, code_id: int):
-    if code_id not in urls:
+def redirect_code(request: Request, code_id: int, session: SessionDep):
+    shortened_url = session.get(ShortenedURL, code_id)
+    if not shortened_url:
         return templates.TemplateResponse(request=request, name="404.html",
                                           status_code=status.HTTP_404_NOT_FOUND)
 
-    return urls[code_id]
+    return shortened_url.url
 
 
