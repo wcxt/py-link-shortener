@@ -25,7 +25,7 @@ def read_root(request: Request):
 @app.post("/", response_class=HTMLResponse)
 def shorten_url(request: Request, url: Annotated[str, Form()], session: SessionDep):
     try:
-        data = ShortenedURLCreate.model_validate({url: url})
+        data = ShortenedURLCreate.model_validate({"url": url})
     except ValidationError:
         return templates.TemplateResponse(request=request, name="index.html",
                                           context={"error": "Invalid URL. Please enter a valid URL."},
