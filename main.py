@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from typing import Annotated
-from fastapi import FastAPI, Form, Request, status
+from fastapi import FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from database import SessionDep, ShortenedURL 
 
@@ -31,14 +32,19 @@ def shorten_url(request: Request, url: Annotated[str, Form()], session: SessionD
         return templates.TemplateResponse(request=request, name="index.html",
                                           context={"error": "Invalid URL. Please enter a valid URL."},
                                           status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+    for _ in range(10):
+        try:
+            short_url_db = ShortenedURL(url=str(data.url))
+            session.add(short_url_db)
+            session.commit()
+            session.refresh(short_url_db)
+            return templates.TemplateResponse(request=request, name="code.html",
+                                              context={"code": short_url_db.code},
+                                              status_code=status.HTTP_201_CREATED)
+        except IntegrityError:
+            session.rollback()
 
-    short_url_db = ShortenedURL(url=str(data.url))
-    session.add(short_url_db)
-    session.commit()
-    session.refresh(short_url_db)
-    return templates.TemplateResponse(request=request, name="code.html",
-                                      context={"code": short_url_db.code},
-                                      status_code=status.HTTP_201_CREATED)
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @app.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 def redirect_code(request: Request, code: str, session: SessionDep):
