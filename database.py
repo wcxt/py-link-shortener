@@ -9,9 +9,6 @@ class ShortenedURL(SQLModel, table=True):
 
 engine = create_engine(str(settings.postgres_url), echo=True)
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
 # This is a generator which will
 # - 1. return new session with first .next()
 # - 2. close session with second .next()
