@@ -4,6 +4,7 @@ from fastapi import FastAPI, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
+from sqlmodel import select
 from database import SessionDep, ShortenedURL 
 
 app = FastAPI()
@@ -36,12 +37,14 @@ def shorten_url(request: Request, url: Annotated[str, Form()], session: SessionD
     session.commit()
     session.refresh(short_url_db)
     return templates.TemplateResponse(request=request, name="code.html",
-                                      context={"code_id": short_url_db.id},
+                                      context={"code": short_url_db.code},
                                       status_code=status.HTTP_201_CREATED)
 
-@app.get("/{code_id:int}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
-def redirect_code(request: Request, code_id: int, session: SessionDep):
-    shortened_url = session.get(ShortenedURL, code_id)
+@app.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
+def redirect_code(request: Request, code: str, session: SessionDep):
+    statement = select(ShortenedURL).where(ShortenedURL.code == code)
+    results = session.exec(statement)
+    shortened_url = results.first()
     if not shortened_url:
         return templates.TemplateResponse(request=request, name="404.html",
                                           status_code=status.HTTP_404_NOT_FOUND)
