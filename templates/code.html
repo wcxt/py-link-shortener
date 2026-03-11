@@ -66,8 +66,8 @@
         <p>Your shortened URL is ready:</p>
 
         <div class="short-url">
-            <a href="{{ url_for('redirect_code', code_id=code_id) }}">
-                {{ url_for('redirect_code', code_id=code_id) }}
+            <a href="{{ url_for('redirect_code', code=code) }}">
+                {{ url_for('redirect_code', code=code) }}
             </a>
         </div>
 

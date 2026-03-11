@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 from typing import Annotated
-from fastapi import FastAPI, Form, Request, status
+from fastapi import FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl, ValidationError
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
 from database import SessionDep, ShortenedURL 
 
 app = FastAPI()
@@ -25,23 +27,30 @@ def read_root(request: Request):
 @app.post("/", response_class=HTMLResponse)
 def shorten_url(request: Request, url: Annotated[str, Form()], session: SessionDep):
     try:
-        data = ShortenedURLCreate.model_validate({url: url})
+        data = ShortenedURLCreate.model_validate({"url": url})
     except ValidationError:
         return templates.TemplateResponse(request=request, name="index.html",
                                           context={"error": "Invalid URL. Please enter a valid URL."},
                                           status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+    for _ in range(10):
+        try:
+            short_url_db = ShortenedURL(url=str(data.url))
+            session.add(short_url_db)
+            session.commit()
+            session.refresh(short_url_db)
+            return templates.TemplateResponse(request=request, name="code.html",
+                                              context={"code": short_url_db.code},
+                                              status_code=status.HTTP_201_CREATED)
+        except IntegrityError:
+            session.rollback()
 
-    short_url_db = ShortenedURL(url=str(data.url))
-    session.add(short_url_db)
-    session.commit()
-    session.refresh(short_url_db)
-    return templates.TemplateResponse(request=request, name="code.html",
-                                      context={"code_id": short_url_db.id},
-                                      status_code=status.HTTP_201_CREATED)
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@app.get("/{code_id:int}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
-def redirect_code(request: Request, code_id: int, session: SessionDep):
-    shortened_url = session.get(ShortenedURL, code_id)
+@app.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
+def redirect_code(request: Request, code: str, session: SessionDep):
+    statement = select(ShortenedURL).where(ShortenedURL.code == code)
+    results = session.exec(statement)
+    shortened_url = results.first()
     if not shortened_url:
         return templates.TemplateResponse(request=request, name="404.html",
                                           status_code=status.HTTP_404_NOT_FOUND)
