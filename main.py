@@ -1,13 +1,13 @@
-from contextlib import asynccontextmanager
-from typing import Annotated
-from fastapi import FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, HttpUrl, ValidationError
+from pydantic import BaseModel, HttpUrl 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from database import SessionDep, ShortenedURL 
+
+CODE_MAX_RETRY = 10
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -43,7 +43,7 @@ def redirect_code(request: Request, code: str, session: SessionDep):
 
 @app.post("/api/short", status_code=status.HTTP_201_CREATED, response_model=ShortenedURLPublic)
 def create_short_url(body: ShortenedURLCreate, session: SessionDep):
-    for _ in range(10):
+    for _ in range(CODE_MAX_RETRY):
         try:
             short_url_db = ShortenedURL(url=str(body.url))
             session.add(short_url_db)
