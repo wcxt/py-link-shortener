@@ -2,7 +2,10 @@ alembic==1.18.4
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.1
+argon2-cffi==25.1.0
+argon2-cffi-bindings==25.1.0
 certifi==2026.2.25
+cffi==2.0.0
 click==8.3.1
 dnspython==2.8.0
 email-validator==2.3.0
@@ -23,6 +26,8 @@ MarkupSafe==3.0.3
 mdurl==0.1.2
 nanoid==2.0.0
 psycopg2==2.9.11
+pwdlib==0.3.0
+pycparser==3.0
 pydantic==2.12.5
 pydantic-extra-types==2.11.0
 pydantic-settings==2.13.1
