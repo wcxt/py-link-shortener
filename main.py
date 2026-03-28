@@ -2,10 +2,11 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, HttpUrl 
+from pydantic import BaseModel, EmailStr, Field, HttpUrl 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from database import SessionDep, ShortenedURL 
+from pwdlib import PasswordHash
 
 CODE_MAX_RETRY = 10
 
@@ -20,6 +21,23 @@ class ShortenedURLCreate(BaseModel):
 class ShortenedURLPublic(BaseModel):
     url: HttpUrl
     short_code: str
+
+class UserCreate(BaseModel):
+    email: EmailStr = Field(max_length=255)
+    password: str = Field(min_length=6, max_length=64)
+
+class UserPublic(BaseModel):
+    id: int
+    email: str
+    disabled: bool
+
+password_hash = PasswordHash.recommended()
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return password_hash.verify(plain_password, hashed_password)
+
+def get_hashed_password(plain_password: str) -> str:
+    return password_hash.hash(plain_password)
 
 @app.exception_handler(status.HTTP_404_NOT_FOUND)
 def http_not_found_exception_handler(request, exc):

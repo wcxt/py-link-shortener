@@ -6,6 +6,12 @@ from nanoid import generate
 
 CODE_SIZE=8
 
+class User(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    email: str = Field(max_length=255, unique=True, index=True)
+    password_hash: str = Field(max_length=255)
+    disabled: bool = Field(default=False)
+
 def generate_code():
     return generate(size=CODE_SIZE)
 
