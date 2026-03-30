@@ -1,7 +1,10 @@
-from pydantic import PostgresDsn, field_validator
+from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    jwt_secret: str = Field(min_length=32) 
+    jwt_algorithm: str = "HS256"
+
     postgres_url: PostgresDsn
 
     @field_validator("postgres_url", mode='after')
