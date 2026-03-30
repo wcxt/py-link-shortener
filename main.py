@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field, HttpUrl 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
-from database import SessionDep, ShortenedURL 
+from database import SessionDep, ShortenedURL, User 
 from pwdlib import PasswordHash
 
 CODE_MAX_RETRY = 10
@@ -48,6 +48,10 @@ def http_not_found_exception_handler(request, exc):
 def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
+@app.get("/register", response_class=HTMLResponse)
+def read_register(request: Request):
+    return templates.TemplateResponse(request=request, name="register.html")
+
 @app.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 def redirect_code(request: Request, code: str, session: SessionDep):
     statement = select(ShortenedURL).where(ShortenedURL.code == code)
@@ -72,4 +76,21 @@ def create_short_url(body: ShortenedURLCreate, session: SessionDep):
             session.rollback()
 
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@app.post("/api/users", status_code=status.HTTP_201_CREATED, response_model=UserPublic)
+def create_user(body: UserCreate, session: SessionDep):
+    statement = select(User).where(User.email == body.email)
+    results = session.exec(statement)
+    user = results.first()
+
+    if user:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with the same email already exists")
+
+    hashed_password = get_hashed_password(body.password)
+    user_db = User(email=body.email, password_hash=hashed_password)
+    session.add(user_db)
+    session.commit()
+    session.refresh(user_db)
+
+    return user_db
 
