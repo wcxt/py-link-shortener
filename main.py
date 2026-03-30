@@ -48,6 +48,10 @@ def http_not_found_exception_handler(request, exc):
 def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
+@app.get("/register", response_class=HTMLResponse)
+def read_register(request: Request):
+    return templates.TemplateResponse(request=request, name="register.html")
+
 @app.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 def redirect_code(request: Request, code: str, session: SessionDep):
     statement = select(ShortenedURL).where(ShortenedURL.code == code)
