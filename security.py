@@ -2,9 +2,18 @@ from datetime import timedelta, datetime, timezone
 from typing import Any
 from fastapi import HTTPException, status
 import jwt
+from pwdlib import PasswordHash
 from sqlmodel import Session, select
 from database import User
 from settings import settings
+
+password_hash = PasswordHash.recommended()
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return password_hash.verify(plain_password, hashed_password)
+
+def get_hashed_password(plain_password: str) -> str:
+    return password_hash.hash(plain_password)
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
@@ -49,5 +58,21 @@ def get_current_enabled_user(session: Session, token: str) -> User:
     if user.disabled:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Disabled user")
     return user
+
+def authenticate_user(session: Session, email: str, password: str) -> User | None:
+    statement = select(User).where(User.email == email)
+    results = session.exec(statement)
+    user = results.first()
+    if not user:
+        return None
+
+    if user.disabled:
+        return None
+
+    if not verify_password(password, user.password_hash):
+        return None
+
+    return user
+
 
 
