@@ -9,6 +9,10 @@ from database import SessionDep, User
 from settings import settings
 from fastapi.security import OAuth2PasswordBearer
 
+class AccessTokenPublic(BaseModel):
+    access_token: str
+    token_type: str
+
 password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
