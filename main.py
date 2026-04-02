@@ -46,6 +46,10 @@ def read_root(request: Request):
 def read_register(request: Request):
     return templates.TemplateResponse(request=request, name="register.html")
 
+@app.get("/login", response_class=HTMLResponse)
+def read_login(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html")
+
 @app.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 def redirect_code(request: Request, code: str, session: SessionDep):
     statement = select(ShortenedURL).where(ShortenedURL.code == code)
