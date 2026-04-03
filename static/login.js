@@ -1,3 +1,5 @@
+import { setAccessToken } from "./utils.js"
+
 const form = document.getElementById('login-form');
 const errorEl = document.getElementById('error');
 const resultEl = document.getElementById('result');
@@ -41,6 +43,7 @@ form.addEventListener('submit', async (e) => {
 		form.reset();
 
 		console.log('Access token:', data.access_token);
+		setAccessToken(data.access_token)
 	} catch (err) {
 		errorEl.textContent = 'Network or server error';
 	}
