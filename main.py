@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -8,7 +9,8 @@ from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from database import SessionDep, ShortenedURL, User
-from security import AccessTokenPublic, authenticate_user, get_hashed_password, create_access_token 
+from security import AccessTokenPublic, authenticate_user, get_hashed_password, create_access_token
+from settings import settings 
 
 CODE_MAX_RETRY = 10
 
@@ -102,6 +104,7 @@ def create_access_token_from_login(form_body: Annotated[OAuth2PasswordRequestFor
                                 "error": "invalid_grant",
                                 "error_description": "Incorrect username or password"
                             })
-    access_token = create_access_token({"sub": user.id})
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token({"sub": user.id}, expires_delta=access_token_expires)
     return AccessTokenPublic(access_token=access_token, token_type="Bearer")
 
