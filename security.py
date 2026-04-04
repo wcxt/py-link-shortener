@@ -13,6 +13,12 @@ class AccessTokenPublic(BaseModel):
     access_token: str
     token_type: str
 
+class OAuth2PasswordException(Exception):
+    def __init__(self, type: str, description: str | None = None) -> None:
+        super().__init__(description)
+        self.type = type
+        self.description = description
+
 password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 
@@ -45,28 +51,28 @@ def get_current_user(session: SessionDep, token: Annotated[str, Depends(oauth2_s
     try:
         decoded = decode_access_token(token)
     except jwt.InvalidTokenError:
-        raise credential_error
+        raise OAuth2PasswordException(type="invalid_token")
 
     subject = decoded.get("sub")
     if subject is None or not isinstance(subject, str):
-        raise credential_error
+        raise OAuth2PasswordException(type="invalid_token")
 
     try:
         user_id = int(subject)
     except ValueError:
-        raise credential_error
+        raise OAuth2PasswordException(type="invalid_token")
 
     statement = select(User).where(User.id == user_id)
     results = session.exec(statement)
     user = results.first()
     if not user:
-        raise credential_error
+        raise OAuth2PasswordException(type="invalid_token")
 
     return user
 
 def get_current_enabled_user(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.disabled:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Disabled user")
+        raise OAuth2PasswordException(type="invalid_token", description="User is disabled")
     return user
 
 def authenticate_user(session: Session, email: str, password: str) -> User | None:

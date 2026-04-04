@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from database import SessionDep, ShortenedURL, User
-from security import AccessTokenPublic, authenticate_user, get_hashed_password, create_access_token
+from security import AccessTokenPublic, OAuth2PasswordException, authenticate_user, get_hashed_password, create_access_token
 from settings import settings 
 
 CODE_MAX_RETRY = 10
@@ -39,6 +39,27 @@ class UserPublic(BaseModel):
 def http_not_found_exception_handler(request, exc):
     return templates.TemplateResponse(request=request, name="404_global.html",
                                       status_code=status.HTTP_404_NOT_FOUND)
+
+@app.exception_handler(OAuth2PasswordException)
+def oauth2_password_exception_handler(_request: Request, exc: OAuth2PasswordException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    headers = {}
+    body = {"error": exc.type}
+
+    if exc.type == "invalid_token":
+        status_code = status.HTTP_401_UNAUTHORIZED
+        headers = {"WWW-Authenticate": f'Bearer error="{exc.type}"'}
+        if exc.description:
+            headers["WWW-Authenticate"] += f', error_description="{exc.description}"'
+
+    if exc.description:
+        body["error_description"] = exc.description
+
+    return JSONResponse(
+        content=body,
+        status_code=status_code,
+        headers=headers
+    )
 
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
@@ -98,12 +119,8 @@ def create_user(body: UserCreate, session: SessionDep):
 def create_access_token_from_login(form_body: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
     user = authenticate_user(session, form_body.username, form_body.password)
     if not user:
-        # NOTE: detail key not followed by OAuth2 standards
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail={
-                                "error": "invalid_grant",
-                                "error_description": "Incorrect username or password"
-                            })
+        raise OAuth2PasswordException("invalid_grant", description="Incorrect username or password")
+
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token({"sub": user.id}, expires_delta=access_token_expires)
     return AccessTokenPublic(access_token=access_token, token_type="Bearer")
