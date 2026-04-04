@@ -1,10 +1,12 @@
 from datetime import timedelta
 from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestFormStrict
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.exception_handlers import request_validation_exception_handler
 from pydantic import BaseModel, EmailStr, Field, HttpUrl 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -61,6 +63,13 @@ def oauth2_password_exception_handler(_request: Request, exc: OAuth2PasswordExce
         headers=headers
     )
 
+@app.exception_handler(RequestValidationError)
+async def custom_request_validation_error_handler(request: Request, exc: RequestValidationError):
+    print(exc)
+    if request.url.path == "/api/token":
+        raise OAuth2PasswordException("invalid_request")
+    return await request_validation_exception_handler(request, exc)
+
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
@@ -116,7 +125,7 @@ def create_user(body: UserCreate, session: SessionDep):
     return user_db
 
 @app.post("/api/token", response_model=AccessTokenPublic)
-def create_access_token_from_login(form_body: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
+def create_access_token_from_login(form_body: Annotated[OAuth2PasswordRequestFormStrict, Depends()], session: SessionDep):
     user = authenticate_user(session, form_body.username, form_body.password)
     if not user:
         raise OAuth2PasswordException("invalid_grant", description="Incorrect username or password")
