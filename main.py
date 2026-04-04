@@ -43,14 +43,14 @@ def http_not_found_exception_handler(request, exc):
                                       status_code=status.HTTP_404_NOT_FOUND)
 
 @app.exception_handler(OAuth2PasswordException)
-def oauth2_password_exception_handler(_request: Request, exc: OAuth2PasswordException):
+async def oauth2_password_exception_handler(_request: Request, exc: OAuth2PasswordException):
     status_code = status.HTTP_400_BAD_REQUEST
     headers = {}
-    body = {"error": exc.type}
+    body = {"error": exc.error}
 
-    if exc.type == "invalid_token":
+    if exc.error == "invalid_token":
         status_code = status.HTTP_401_UNAUTHORIZED
-        headers = {"WWW-Authenticate": f'Bearer error="{exc.type}"'}
+        headers = {"WWW-Authenticate": f'Bearer error="{exc.error}"'}
         if exc.description:
             headers["WWW-Authenticate"] += f', error_description="{exc.description}"'
 
@@ -67,7 +67,7 @@ def oauth2_password_exception_handler(_request: Request, exc: OAuth2PasswordExce
 async def custom_request_validation_error_handler(request: Request, exc: RequestValidationError):
     print(exc)
     if request.url.path == "/api/token":
-        raise OAuth2PasswordException("invalid_request")
+        return await oauth2_password_exception_handler(request, OAuth2PasswordException("invalid_request"))
     return await request_validation_exception_handler(request, exc)
 
 @app.get("/", response_class=HTMLResponse)

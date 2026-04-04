@@ -24,13 +24,8 @@ form.addEventListener('submit', async (e) => {
 		const data = await res.json();
 
 		if (!res.ok) {
-			if (res.status == 400 && data.detail) {
-				errorEl.textContent = data.detail.error_description || data.error
-				return
-			} else if (res.status == 422 && data.detail) {
-				const field = data.detail[0].loc[data.detail[0].loc.length - 1]
-				const msg = data.detail[0].msg
-				errorEl.textContent = `${field}: ${msg}`
+			if (res.status == 400 && data.error) {
+				errorEl.textContent = data.error_description || data.error
 				return
 			} else if (res.status == 500 && data.detail) {
 				errorEl.textContent = data.detail
