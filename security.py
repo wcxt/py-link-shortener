@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime, timezone
-from typing import Annotated, Any
+from typing import Annotated, Any, override
 from fastapi import Depends, HTTPException, status
 import jwt
 from pwdlib import PasswordHash
@@ -13,8 +13,22 @@ class AccessTokenPublic(BaseModel):
     access_token: str
     token_type: str
 
+class OAuth2PasswordException(Exception):
+    def __init__(self, error: str, description: str | None = None) -> None:
+        super().__init__(description)
+        self.error = error
+        self.description = description
+
+class CustomOAuth2PasswordBearer(OAuth2PasswordBearer):
+    @override
+    def make_not_authenticated_error(self):
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 password_hash = PasswordHash.recommended()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+oauth2_scheme = CustomOAuth2PasswordBearer(tokenUrl="/api/token")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
@@ -36,37 +50,31 @@ def decode_access_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
 
 def get_current_user(session: SessionDep, token: Annotated[str, Depends(oauth2_scheme)]) -> User:
-    credential_error = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"}
-    )
-
     try:
         decoded = decode_access_token(token)
     except jwt.InvalidTokenError:
-        raise credential_error
+        raise OAuth2PasswordException("invalid_token")
 
     subject = decoded.get("sub")
     if subject is None or not isinstance(subject, str):
-        raise credential_error
+        raise OAuth2PasswordException("invalid_token")
 
     try:
         user_id = int(subject)
     except ValueError:
-        raise credential_error
+        raise OAuth2PasswordException("invalid_token")
 
     statement = select(User).where(User.id == user_id)
     results = session.exec(statement)
     user = results.first()
     if not user:
-        raise credential_error
+        raise OAuth2PasswordException("invalid_token")
 
     return user
 
 def get_current_enabled_user(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.disabled:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Disabled user")
+        raise OAuth2PasswordException("invalid_token", description="User is disabled")
     return user
 
 def authenticate_user(session: Session, email: str, password: str) -> User | None:
