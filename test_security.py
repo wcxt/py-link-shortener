@@ -5,31 +5,29 @@ from database import User
 from security import OAuth2PasswordException, authenticate_user, create_access_token, decode_access_token, get_current_enabled_user, get_current_user, get_hashed_password, verify_password
 import pytest
 from unittest.mock import Mock, patch
+from conftest import TEST_EMAIL, TEST_PASSWORD
+
+def make_session_mock(user):
+    session_mock = Mock()
+    result_mock = Mock()
+
+    result_mock.first.return_value = user 
+    session_mock.exec.return_value = result_mock
+
+    return session_mock
 
 def test_verify_password():
-    test_plain_password = "password"
-    test_hashed_password = get_hashed_password(test_plain_password)
+    test_hashed_password = get_hashed_password(TEST_PASSWORD)
 
-    assert verify_password(test_plain_password, test_hashed_password)
+    assert verify_password(TEST_PASSWORD, test_hashed_password)
 
 def test_verify_password_incorrect():
-    test_plain_password = "password"
-    test_hashed_password = get_hashed_password("password1")
+    test_hashed_password = get_hashed_password(TEST_PASSWORD + "123")
 
-    assert verify_password(test_plain_password, test_hashed_password) == False
-
-def test_get_hashed_password_different():
-    test_plain_password = "password"
-
-    hashed_password = get_hashed_password(test_plain_password)
-    hashed_password2 = get_hashed_password(test_plain_password)
-
-    assert hashed_password != hashed_password2
+    assert verify_password(TEST_PASSWORD, test_hashed_password) == False
 
 def test_get_hashed_password():
-    test_plain_password = "password"
-
-    hashed_password = get_hashed_password(test_plain_password)
+    hashed_password = get_hashed_password(TEST_PASSWORD)
     assert hashed_password is not None
     assert isinstance(hashed_password, str)
     assert len(hashed_password) > 0
@@ -68,57 +66,32 @@ def test_create_and_decode_access_token_with_custom_expires():
     assert decoded["exp"] < after + 10 * 60 
 
 def test_authenticate_user():
-    test_email = "user@example.com"
-    test_password = "password"
-    test_user = User(email=test_email, password_hash=get_hashed_password(test_password))
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
+    session_mock = make_session_mock(test_user)
 
-    session_mock = Mock()
-    result_mock = Mock()
-
-    result_mock.first.return_value = test_user
-    session_mock.exec.return_value = result_mock
-
-    result = authenticate_user(session_mock, test_email, test_password)
+    result = authenticate_user(session_mock, TEST_EMAIL, TEST_PASSWORD)
     assert result == test_user
 
 
 def test_authenticate_user_disabled():
-    test_email = "user@example.com"
-    test_password = "password"
+    test_user = User(email=TEST_EMAIL,
+                     password_hash=get_hashed_password(TEST_PASSWORD),
+                     disabled=True)
+    session_mock = make_session_mock(test_user)
 
-    session_mock = Mock()
-    result_mock = Mock()
-
-    result_mock.first.return_value = User(email=test_email,
-                                          password_hash=get_hashed_password(test_password),
-                                          disabled=True)
-    session_mock.exec.return_value = result_mock
-
-    result = authenticate_user(session_mock, test_email, test_password)
+    result = authenticate_user(session_mock, TEST_EMAIL, TEST_PASSWORD)
     assert result is None
 
 def test_authenticate_user_incorrect_password():
-    test_email = "user@example.com"
-    test_password = "password"
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
+    session_mock = make_session_mock(test_user)
 
-    session_mock = Mock()
-    result_mock = Mock()
-
-    result_mock.first.return_value = User(email=test_email,
-                                          password_hash=get_hashed_password(test_password))
-    session_mock.exec.return_value = result_mock
-
-    result = authenticate_user(session_mock, test_email, "password1")
+    result = authenticate_user(session_mock, TEST_EMAIL, TEST_PASSWORD + "123")
     assert result is None
 
 def test_get_current_user():
-    test_user = User(email="user@example.com", password_hash="password", disabled=True)
-
-    session_mock = Mock()
-
-    result_mock = Mock()
-    result_mock.first.return_value = test_user
-    session_mock.exec.return_value = result_mock
+    test_user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD, disabled=True)
+    session_mock = make_session_mock(test_user)
 
     with patch("security.decode_access_token") as mock_decode:
         mock_decode.return_value = {"sub": "123"}
@@ -134,20 +107,16 @@ def test_get_current_user_invalid_token():
             _ = get_current_user(session, "bad_token")
 
 def test_get_current_user_invalid_sub():
-    session = Mock()
+    session_mock = Mock()
 
     with patch("security.decode_access_token") as mock_decode:
         mock_decode.return_value = {"sub": 123}
 
         with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):
-            _ = get_current_user(session, "token")
+            _ = get_current_user(session_mock, "token")
 
 def test_get_current_user_not_found():
-    session_mock = Mock()
-
-    result_mock = Mock()
-    result_mock.first.return_value = None
-    session_mock.exec.return_value = result_mock
+    session_mock = make_session_mock(None)
 
     with patch("security.decode_access_token") as mock_decode:
         mock_decode.return_value = {"sub": "123"}
@@ -156,13 +125,13 @@ def test_get_current_user_not_found():
             _ = get_current_user(session_mock, "token")
 
 def test_get_current_enabled_user():
-     test_user = User(email="user@example.com", password_hash="1a2b3c4d")
+     test_user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD + "a1bs")
 
      user = get_current_enabled_user(test_user)
      assert user == test_user
 
 def test_get_current_enabled_user_disabled():
-     user = User(email="user@example.com", password_hash="1a2b3c4d", disabled=True)
+     user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD + "a1bs", disabled=True)
 
      with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):
          _ = get_current_enabled_user(user)

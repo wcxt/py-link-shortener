@@ -3,12 +3,12 @@ from sqlmodel import Session, select
 
 from database import ShortenedURL, User
 from security import decode_access_token, get_hashed_password, password_hash, verify_password
+from conftest import TEST_EMAIL, TEST_PASSWORD, TEST_URL
 
 def test_create_short_url(client: TestClient):
-    test_url = "http://www.google.com/"
     response = client.post(
             "/api/short",
-            json={"url": test_url}
+            json={"url": TEST_URL}
     )
     data = response.json()
 
@@ -16,7 +16,7 @@ def test_create_short_url(client: TestClient):
     assert data["short_code"] is not None
     assert isinstance(data["short_code"], str)
     assert len(data["short_code"]) == 8 
-    assert data["url"] == test_url
+    assert data["url"] == TEST_URL
 
 def test_create_short_url_invalid_input(client: TestClient):
     response = client.post(
@@ -28,39 +28,34 @@ def test_create_short_url_invalid_input(client: TestClient):
     assert response.status_code == 422
 
 def test_create_user(session: Session, client: TestClient):
-    test_email = "user@example.com"
-    test_password = "password"
     response = client.post(
             "/api/users",
-            json={"email": test_email, "password": test_password}
+            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
     )
     data = response.json()
 
     assert response.status_code == 201
     assert data["id"] is not None
     assert isinstance(data["id"], int)
-    assert data["email"] == test_email
+    assert data["email"] == TEST_EMAIL
     assert data["disabled"] == False
 
-    statement = select(User).where(User.email == test_email)
+    statement = select(User).where(User.email == TEST_EMAIL)
     user = session.exec(statement).first()
 
     assert user is not None
     assert user.password_hash is not None
     assert user.disabled == False
-    assert verify_password(test_password, user.password_hash)
+    assert verify_password(TEST_PASSWORD, user.password_hash)
 
 def test_create_user_exists(session: Session, client: TestClient):
-    test_email = "user@example.com"
-    test_password = "password"
-
-    test_user = User(email=test_email, password_hash=get_hashed_password(test_password))
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
     session.add(test_user)
     session.commit()
     
     response = client.post(
             "/api/users",
-            json={"email": test_email, "password": test_password}
+            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
     )
     data = response.json()
 
@@ -88,17 +83,14 @@ def test_create_user_invalid_input(session: Session, client: TestClient):
     assert len(users) == 0
 
 def test_create_access_token_from_login(session: Session, client: TestClient):
-    test_email = "user@example.com"
-    test_password = "password"
-
-    test_user = User(email=test_email, password_hash=get_hashed_password(test_password))
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
     session.add(test_user)
     session.commit()
     session.refresh(test_user)
 
     response = client.post(
             "/api/token",
-            data={"grant_type": "password", "username": test_email, "password": test_password}
+            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
     )
     data = response.json()
 
@@ -126,12 +118,9 @@ def test_create_access_token_from_login_invalid_input(client: TestClient):
 
 
 def test_create_access_token_from_login_incorrect_credentials(client: TestClient):
-    test_email = "user@example.com"
-    test_password = "password"
-
     response = client.post(
             "/api/token",
-            data={"grant_type": "password", "username": test_email, "password": test_password}
+            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
     )
     data = response.json()
 
@@ -141,9 +130,7 @@ def test_create_access_token_from_login_incorrect_credentials(client: TestClient
     assert isinstance(data["error_description"], str) 
 
 def test_redirect_code(session: Session, client: TestClient):
-    test_url = "http://www.google.com/"
-
-    test_short_url = ShortenedURL(url=test_url)
+    test_short_url = ShortenedURL(url=TEST_URL)
     session.add(test_short_url)
     session.commit()
     session.refresh(test_short_url)
@@ -151,7 +138,7 @@ def test_redirect_code(session: Session, client: TestClient):
     response = client.get(f"/{test_short_url.code}", follow_redirects=False)
 
     assert response.status_code == 301
-    assert response.headers["location"] == test_url
+    assert response.headers["location"] == TEST_URL
 
 def test_redirect_code_not_found(client: TestClient):
     response = client.get(f"/1a2b3c4d", follow_redirects=False)
