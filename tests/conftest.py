@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 import pytest
-from database import get_session
-from main import app
+from app.core.database import get_session
+from app.main import app
 
 TEST_EMAIL="user@example.com"
 TEST_PASSWORD="password"

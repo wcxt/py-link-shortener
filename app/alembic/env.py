@@ -15,8 +15,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Run schemas before 
-from database import SQLModel
-from settings import settings
+from app.core.database import SQLModel
+from app.settings import settings
 
 target_metadata = SQLModel.metadata
 

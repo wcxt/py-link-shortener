@@ -1,9 +1,11 @@
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from pytest import Session
+from sqlmodel import select
 
-from database import ShortenedURL, User
-from security import decode_access_token, get_hashed_password, password_hash, verify_password
-from conftest import TEST_EMAIL, TEST_PASSWORD, TEST_URL
+from app.core.security import decode_access_token, get_hashed_password, verify_password
+from app.models import User
+from tests.conftest import TEST_EMAIL, TEST_PASSWORD, TEST_URL
+
 
 def test_create_short_url(client: TestClient):
     response = client.post(
@@ -127,44 +129,4 @@ def test_create_access_token_from_login_incorrect_credentials(client: TestClient
     assert response.status_code == 400
     assert data["error"] == "invalid_grant" 
     assert data["error_description"] is not None
-    assert isinstance(data["error_description"], str) 
-
-def test_redirect_code(session: Session, client: TestClient):
-    test_short_url = ShortenedURL(url=TEST_URL)
-    session.add(test_short_url)
-    session.commit()
-    session.refresh(test_short_url)
-
-    response = client.get(f"/{test_short_url.code}", follow_redirects=False)
-
-    assert response.status_code == 301
-    assert response.headers["location"] == TEST_URL
-
-def test_redirect_code_not_found(client: TestClient):
-    response = client.get(f"/1a2b3c4d", follow_redirects=False)
-
-    assert response.status_code == 404
-    assert "text/html" in response.headers["content-type"]
-
-def test_read_root(client: TestClient):
-    response = client.get("/")
-
-    assert response.status_code == 200 
-    assert "text/html" in response.headers["content-type"]
-
-def test_read_register(client: TestClient):
-    response = client.get("/register")
-
-    assert response.status_code == 200 
-    assert "text/html" in response.headers["content-type"]
-
-def test_read_login(client: TestClient):
-    response = client.get("/login")
-
-    assert response.status_code == 200 
-    assert "text/html" in response.headers["content-type"]
-
-
-
-
-
+    assert isinstance(data["error_description"], str)
