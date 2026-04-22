@@ -1,3 +1,4 @@
+from fastapi.templating import Jinja2Templates
 from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,6 +20,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env") # pyright: ignore[reportUnannotatedClassAttribute]
 
-settings = Settings() # pyright:ignore[reportCallIssue] 
+settings = Settings() # pyright:ignore[reportCallIssue]
+
+templates = Jinja2Templates(directory="app/templates")
 
 

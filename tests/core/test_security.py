@@ -1,11 +1,11 @@
 from datetime import timedelta
 import time
 import jwt
-from database import User
-from security import OAuth2PasswordException, authenticate_user, create_access_token, decode_access_token, get_current_enabled_user, get_current_user, get_hashed_password, verify_password
+from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, decode_access_token, get_current_enabled_user, get_current_user, get_hashed_password, verify_password
 import pytest
 from unittest.mock import Mock, patch
-from conftest import TEST_EMAIL, TEST_PASSWORD
+from app.models import User
+from tests.conftest import TEST_EMAIL, TEST_PASSWORD
 
 def make_session_mock(user):
     session_mock = Mock()
@@ -93,7 +93,7 @@ def test_get_current_user():
     test_user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD, disabled=True)
     session_mock = make_session_mock(test_user)
 
-    with patch("security.decode_access_token") as mock_decode:
+    with patch("app.core.security.decode_access_token") as mock_decode:
         mock_decode.return_value = {"sub": "123"}
 
         user = get_current_user(session_mock, "token")
@@ -102,14 +102,14 @@ def test_get_current_user():
 def test_get_current_user_invalid_token():
     session = Mock()
 
-    with patch("security.decode_access_token", side_effect=jwt.InvalidTokenError):
+    with patch("app.core.security.decode_access_token", side_effect=jwt.InvalidTokenError):
         with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):
             _ = get_current_user(session, "bad_token")
 
 def test_get_current_user_invalid_sub():
     session_mock = Mock()
 
-    with patch("security.decode_access_token") as mock_decode:
+    with patch("app.core.security.decode_access_token") as mock_decode:
         mock_decode.return_value = {"sub": 123}
 
         with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):
@@ -118,7 +118,7 @@ def test_get_current_user_invalid_sub():
 def test_get_current_user_not_found():
     session_mock = make_session_mock(None)
 
-    with patch("security.decode_access_token") as mock_decode:
+    with patch("app.core.security.decode_access_token") as mock_decode:
         mock_decode.return_value = {"sub": "123"}
 
         with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):

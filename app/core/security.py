@@ -3,21 +3,12 @@ from typing import Annotated, Any, override
 from fastapi import Depends, HTTPException, status
 import jwt
 from pwdlib import PasswordHash
-from pydantic import BaseModel
 from sqlmodel import Session, select
-from database import SessionDep, User
-from settings import settings
+from app.core.database import SessionDep
+from app.core.exceptions import OAuth2PasswordException
+from app.models import User
+from app.core.settings import settings
 from fastapi.security import OAuth2PasswordBearer
-
-class AccessTokenPublic(BaseModel):
-    access_token: str
-    token_type: str
-
-class OAuth2PasswordException(Exception):
-    def __init__(self, error: str, description: str | None = None) -> None:
-        super().__init__(description)
-        self.error = error
-        self.description = description
 
 class CustomOAuth2PasswordBearer(OAuth2PasswordBearer):
     @override
