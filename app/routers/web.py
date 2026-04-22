@@ -5,7 +5,7 @@ from sqlmodel import select
 
 from app.core.database import SessionDep
 from app.models import ShortenedURL
-from app.settings import templates
+from app.core.settings import templates
 
 router = APIRouter()
 

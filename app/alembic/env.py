@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 
 # Run schemas before 
 from app.core.database import SQLModel
-from app.settings import settings
+from app.core.settings import settings
 
 target_metadata = SQLModel.metadata
 

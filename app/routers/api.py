@@ -10,7 +10,7 @@ from app.models import ShortenedURL, User
 from app.schemas import AccessTokenPublic, ShortenedURLCreate, ShortenedURLPublic, UserCreate, UserPublic
 from app.core.database import SessionDep
 from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, get_hashed_password
-from app.settings import settings
+from app.core.settings import settings
 
 CODE_MAX_RETRY = 10
 

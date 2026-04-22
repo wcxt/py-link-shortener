@@ -3,7 +3,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.settings import templates
+from app.core.settings import templates
 
 class OAuth2PasswordException(Exception):
     def __init__(self, error: str, description: str | None = None) -> None:

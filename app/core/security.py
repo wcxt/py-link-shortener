@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from app.core.database import SessionDep
 from app.core.exceptions import OAuth2PasswordException
 from app.models import User
-from app.settings import settings
+from app.core.settings import settings
 from fastapi.security import OAuth2PasswordBearer
 
 class CustomOAuth2PasswordBearer(OAuth2PasswordBearer):
