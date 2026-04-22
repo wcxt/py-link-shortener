@@ -97,6 +97,7 @@ def test_create_access_token_from_login(session: Session, client: TestClient):
     data = response.json()
 
     assert response.status_code == 200
+    assert "set-cookie" not in response.headers
     assert data["token_type"] == "Bearer"
     assert data["access_token"] is not None
     assert isinstance(data["access_token"], str)
@@ -107,6 +108,24 @@ def test_create_access_token_from_login(session: Session, client: TestClient):
     assert decoded["exp"] is not None
     assert isinstance(decoded["exp"], int)
     assert decoded["exp"] > 0
+
+def test_create_access_token_from_login_with_cookie(session: Session, client: TestClient):
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
+    session.add(test_user)
+    session.commit()
+    session.refresh(test_user)
+
+    response = client.post(
+            "/api/token",
+            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD, "client_type": "web"},
+    )
+    data = response.json()
+    
+    assert response.status_code == 200
+    assert data["token_type"] == "Bearer"
+    assert data["access_token"] is not None
+    assert response.cookies.get("access_token") is not None
+    assert len(response.cookies.get("access_token")) > 0 
 
 def test_create_access_token_from_login_invalid_input(client: TestClient):
     response = client.post(

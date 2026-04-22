@@ -1,7 +1,8 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestFormStrict
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -48,11 +49,22 @@ def create_user(body: UserCreate, session: SessionDep):
     return user_db
 
 @router.post("/token", response_model=AccessTokenPublic)
-def create_access_token_from_login(form_body: Annotated[OAuth2PasswordRequestFormStrict, Depends()], session: SessionDep):
+def create_access_token_from_login(session: SessionDep,
+                                   form_body: Annotated[OAuth2PasswordRequestFormStrict, Depends()],
+                                   client_type: Annotated[str | None, Form()] = None):
     user = authenticate_user(session, form_body.username, form_body.password)
     if not user:
         raise OAuth2PasswordException("invalid_grant", description="Incorrect username or password")
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token({"sub": str(user.id)}, expires_delta=access_token_expires)
-    return AccessTokenPublic(access_token=access_token, token_type="Bearer")
+
+    response = JSONResponse(content=AccessTokenPublic(access_token=access_token, token_type="Bearer").model_dump())
+    if client_type == "web":
+        response.set_cookie(
+            "access_token",
+            access_token,
+            max_age=access_token_expires
+        ) 
+
+    return response
