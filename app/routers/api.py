@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestFormStrict
 from sqlalchemy.exc import IntegrityError
@@ -67,3 +67,8 @@ def create_access_token_from_login(session: SessionDep,
         ) 
 
     return response
+
+@router.delete("/token", status_code=status.HTTP_204_NO_CONTENT)
+def delete_access_token_cookie(response: Response):
+    response.delete_cookie("access_token")
+    return None

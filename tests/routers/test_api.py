@@ -149,3 +149,10 @@ def test_create_access_token_from_login_incorrect_credentials(client: TestClient
     assert data["error"] == "invalid_grant" 
     assert data["error_description"] is not None
     assert isinstance(data["error_description"], str)
+
+def test_delete_access_token_cookie(client: TestClient):
+    response = client.delete("/api/token", cookies={"access_token": "test_token"})
+
+    assert response.status_code == 204
+    assert response.cookies.get("access_token") is None
+    assert response.content == b""
