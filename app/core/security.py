@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from typing import Annotated, Any, override
-from fastapi import Depends, HTTPException, status
+from click.core import F
+from fastapi import Cookie, Depends, HTTPException, status
 import jwt
 from pwdlib import PasswordHash
 from sqlmodel import Session, select
@@ -10,16 +11,8 @@ from app.models import User
 from app.core.settings import settings
 from fastapi.security import OAuth2PasswordBearer
 
-class CustomOAuth2PasswordBearer(OAuth2PasswordBearer):
-    @override
-    def make_not_authenticated_error(self):
-        return HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
 password_hash = PasswordHash.recommended()
-oauth2_scheme = CustomOAuth2PasswordBearer(tokenUrl="/api/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token", auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
@@ -40,7 +33,17 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
 def decode_access_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
 
-def get_current_user(session: SessionDep, token: Annotated[str, Depends(oauth2_scheme)]) -> User:
+def get_token_from_cookie_or_header(header_token: Annotated[str | None, Depends(oauth2_scheme)], access_token: Annotated[str | None, Cookie()]) -> str:
+    if access_token:
+        return access_token
+    if header_token:
+        return header_token
+    raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+    )
+
+def get_current_user(session: SessionDep, token: Annotated[str, Depends(get_token_from_cookie_or_header)]) -> User:
     try:
         decoded = decode_access_token(token)
     except jwt.InvalidTokenError:

@@ -58,13 +58,12 @@ def create_access_token_from_login(session: SessionDep,
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token({"sub": str(user.id)}, expires_delta=access_token_expires)
-
     response = JSONResponse(content=AccessTokenPublic(access_token=access_token, token_type="Bearer").model_dump())
     if client_type == "web":
         response.set_cookie(
             "access_token",
             access_token,
-            max_age=access_token_expires
+            max_age=access_token_expires.seconds
         ) 
 
     return response
