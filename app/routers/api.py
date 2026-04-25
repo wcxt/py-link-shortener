@@ -63,7 +63,10 @@ def create_access_token_from_login(session: SessionDep,
         response.set_cookie(
             "access_token",
             access_token,
-            max_age=access_token_expires.seconds
+            max_age=access_token_expires.seconds,
+            samesite="lax",
+            secure=settings.cookie_secure,
+            httponly=True,
         ) 
 
     return response
