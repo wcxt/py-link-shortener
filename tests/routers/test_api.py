@@ -151,7 +151,8 @@ def test_create_access_token_from_login_incorrect_credentials(client: TestClient
     assert isinstance(data["error_description"], str)
 
 def test_delete_access_token_cookie(client: TestClient):
-    response = client.delete("/api/token", cookies={"access_token": "test_token"})
+    client.cookies.set("access_token", "test_token")
+    response = client.delete("/api/token")
 
     assert response.status_code == 204
     assert response.cookies.get("access_token") is None
