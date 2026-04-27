@@ -1,83 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortener</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
+{% block title %}Home - URL Shortener{% endblock %}
 
-        h1 {
-            color: #333;
-        }
+{% block styles %}
+.content h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-        form {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            max-width: 400px;
-            margin-top: 20px;
-        }
+.content form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 20px;
+}
 
-        input[type="url"] {
-            padding: 10px;
-            font-size: 16px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
+.content input[type="url"] {
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 100%;
+}
 
-        input[type="submit"] {
-            padding: 10px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+.content input[type="submit"] {
+    padding: 10px;
+    font-size: 16px;
+    background-color: var(--green);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    transition: 0.2s ease;
+}
 
-        input[type="submit"]:hover {
-            background-color: #45a049;
-        }
+.content input[type="submit"]:hover {
+    background-color: var(--green-hover);
+}
 
-        .error {
-            color: red;
-            margin-top: 10px;
-            font-weight: bold;
-        }
+.content .error {
+    color: var(--red);
+    margin-top: 10px;
+    font-weight: bold;
+    text-align: center;
+}
 
-        .result {
-            margin-top: 15px;
-            color: green;
-            word-break: break-all;
-        }
-    </style>
-</head>
+.content .result {
+    margin-top: 15px;
+    color: var(--green);
+    word-break: break-all;
+    text-align: center;
+}
+{% endblock %}
 
-<body>
-    <h1>URL Shortener</h1>
+{% block content %}
+<h1>Shorten Your URL</h1>
+<form id="shorten-form">
+    <input type="url" name="url" placeholder="Enter URL" required>
+    <input type="submit" value="Shorten">
+</form>
+<p class="error" id="error"></p>
+<p class="result" id="result"></p>
+{% endblock %}
 
-    <div id="error" class="error"></div>
-    <div id="result" class="result"></div>
-
-    <form id="shorten-form">
-        <input type="url" name="url" id="url" placeholder="Enter your URL here" required>
-        <input type="submit" value="Shorten URL">
-    </form>
-
-</body>
-
+{% block scripts %}
 <script src="static/index.js"></script>
+{% endblock %}
 
-</html>
+

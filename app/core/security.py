@@ -32,17 +32,28 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
 def decode_access_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
 
-def get_token_from_cookie_or_header(header_token: Annotated[str | None, Depends(oauth2_scheme)], access_token: Annotated[str | None, Cookie()]) -> str:
+def _get_token_from_request(header_token: str | None, access_token: str | None) -> str:
     if access_token:
         return access_token
     if header_token:
         return header_token
     raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": "Bearer"},
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
-def get_current_user(session: SessionDep, token: Annotated[str, Depends(get_token_from_cookie_or_header)]) -> User:
+def get_token_from_request(header_token: Annotated[str | None, Depends(oauth2_scheme)],
+                           access_token: Annotated[str | None, Cookie()]) -> str | None:
+    return _get_token_from_request(header_token, access_token)
+
+def get_token_from_request_optional(header_token: Annotated[str | None, Depends(oauth2_scheme)],
+                                    access_token: Annotated[str | None, Cookie()] = None) -> str | None:
+    try:
+        return _get_token_from_request(header_token, access_token)
+    except HTTPException:
+        return None
+
+def _get_current_user(session: Session, token: str) -> User:
     try:
         decoded = decode_access_token(token)
     except jwt.InvalidTokenError:
@@ -65,9 +76,25 @@ def get_current_user(session: SessionDep, token: Annotated[str, Depends(get_toke
 
     return user
 
+def get_current_user(session: SessionDep, token: Annotated[str, Depends(get_token_from_request)]) -> User:
+    return _get_current_user(session, token)
+
+def get_current_user_optional(session: SessionDep, token: Annotated[str | None, Depends(get_token_from_request_optional)]) -> User | None:
+    if token is None:
+        return None
+    try:
+        return _get_current_user(session, token)
+    except OAuth2PasswordException:
+        return None
+
 def get_current_enabled_user(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.disabled:
         raise OAuth2PasswordException("invalid_token", description="User is disabled")
+    return user
+
+def get_current_enabled_user_optional(user: Annotated[User | None, Depends(get_current_user_optional)]) -> User | None:
+    if user and user.disabled:
+        return None
     return user
 
 def authenticate_user(session: Session, email: str, password: str) -> User | None:

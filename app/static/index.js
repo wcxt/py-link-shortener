@@ -8,7 +8,7 @@ form.addEventListener("submit", async (e) => {
 	errorEl.textContent = ""
 	resultEl.textContent = ""
 
-	const url = document.getElementById("url").value
+	const url = form.url.value.trim()
 
 	try {
 		const res = await fetch("/api/short", {
