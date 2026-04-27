@@ -1,7 +1,5 @@
-import { setAccessToken } from "./utils.js"
-
 const form = document.getElementById('login-form');
-const errorEl = document.getElementById('error');
+const errorEl = document.getElementsById('error');
 const resultEl = document.getElementById('result');
 
 form.addEventListener('submit', async (e) => {
@@ -13,12 +11,13 @@ form.addEventListener('submit', async (e) => {
 	body.append('username', form.username.value);
 	body.append('password', form.password.value);
 	body.append('grant_type', 'password');
+	body.append('client_type', 'web');
 
 	try {
 		const res = await fetch('/api/token', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: body
+			body: body,
 		});
 
 		const data = await res.json();
@@ -36,9 +35,6 @@ form.addEventListener('submit', async (e) => {
 
 		resultEl.textContent = 'Login successful!';
 		form.reset();
-
-		console.log('Access token:', data.access_token);
-		setAccessToken(data.access_token)
 	} catch (err) {
 		errorEl.textContent = 'Network or server error';
 	}

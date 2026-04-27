@@ -1,57 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Not Found - URL Shortener</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
+{% extends "base.html" %}
 
-        .error-code {
-            font-size: 60px;
-            font-weight: bold;
-            color: #cc0000;
-        }
+{% block title %}Page Not Found - URL Shortener{% endblock %}
 
-        h1 {
-            color: #333;
-            margin: 10px 0;
-        }
+{% block styles %}
+.content {
+    text-align: center;
+    padding: 40px;
+}
 
-        p {
-            color: #666;
-            margin: 5px 0;
-        }
+.content h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    color: var(--red);
+}
 
-        a {
-            margin-top: 20px;
-            padding: 10px 16px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 14px;
-        }
+.content p {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
 
-        a:hover {
-            background-color: #45a049;
-        }
-    </style>
-</head>
-<body>
-    <div class="error-code">404</div>
-    <h1>Page Not Found</h1>
-    <p>The page you are looking for does not exist.</p>
-    <a href="/">Go Back Home</a>
-</body>
-</html>
+.content a {
+    color: var(--green);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.content a:hover {
+    text-decoration: underline;
+}
+{% endblock %}
+
+{% block content %}
+<h1>404 - Page Not Found</h1>
+<p>The page you're looking for doesn't exist.</p>
+<a href="/">Go back to Home</a>
+{% endblock %}

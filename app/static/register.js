@@ -8,8 +8,8 @@ form.addEventListener("submit", async (e) => {
 	errorEl.textContent = "";
 	resultEl.textContent = "";
 
-	const email = document.getElementById("email").value;
-	const password = document.getElementById("password").value;
+	const email = form.email.value;
+	const password = form.password.value;
 
 	try {
 		const res = await fetch("/api/users", {
