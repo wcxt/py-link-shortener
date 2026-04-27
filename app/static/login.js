@@ -1,11 +1,9 @@
 const form = document.getElementById('login-form');
 const errorEl = document.getElementById('error');
-const resultEl = document.getElementById('result');
 
 form.addEventListener('submit', async (e) => {
 	e.preventDefault();
 	errorEl.textContent = '';
-	resultEl.textContent = '';
 
 	const body = new URLSearchParams();
 	body.append('username', form.username.value);
@@ -33,8 +31,7 @@ form.addEventListener('submit', async (e) => {
 			throw new Error("Something went wrong")
 		}
 
-		resultEl.textContent = 'Login successful!';
-		form.reset();
+		window.location.href = "/";
 	} catch (err) {
 		errorEl.textContent = 'Network or server error';
 	}

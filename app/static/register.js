@@ -1,12 +1,10 @@
 const form = document.getElementById("register-form");
 const errorEl = document.getElementById("error");
-const resultEl = document.getElementById("result");
 
 form.addEventListener("submit", async (e) => {
 	e.preventDefault();
 
 	errorEl.textContent = "";
-	resultEl.textContent = "";
 
 	const email = form.email.value;
 	const password = form.password.value;
@@ -37,9 +35,8 @@ form.addEventListener("submit", async (e) => {
 			}
 			throw new Error("Something went wrong")
 		}
-
-		resultEl.textContent = 'Registration successful!';
-		form.reset();
+		
+		window.location.href = "/login";
 	} catch (error) {
 		errorEl.textContent = error.message;
 	}
