@@ -2,7 +2,8 @@ from datetime import timedelta
 import time
 from fastapi import HTTPException
 import jwt
-from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, decode_access_token, get_current_enabled_user, get_current_user, get_hashed_password, get_token_from_cookie_or_header, verify_password
+from rich.repr import T
+from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, decode_access_token, get_current_enabled_user, get_current_enabled_user_optional, get_current_user, get_current_user_optional, get_hashed_password, get_token_from_request, get_token_from_request_optional, verify_password
 import pytest
 from unittest.mock import Mock, patch
 from app.models import User
@@ -90,16 +91,19 @@ def test_authenticate_user_incorrect_password():
     result = authenticate_user(session_mock, TEST_EMAIL, TEST_PASSWORD + "123")
     assert result is None
 
-def test_get_token_from_cookie_or_header():
-    assert get_token_from_cookie_or_header("header_token", None) == "header_token"
-    assert get_token_from_cookie_or_header(None, "cookie_token") == "cookie_token"
+def test_get_token_from_request():
+    assert get_token_from_request("header_token", None) == "header_token"
+    assert get_token_from_request(None, "cookie_token") == "cookie_token"
 
-def test_get_token_from_cookie_or_header_none():
+def test_get_token_from_request_none():
     with pytest.raises(HTTPException) as exc_info:
-        get_token_from_cookie_or_header(None, None)
+        get_token_from_request(None, None)
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.headers["WWW-Authenticate"] == "Bearer"
+
+def test_get_token_from_request_optional():
+    assert get_token_from_request_optional(None, None) is None
 
 def test_get_current_user():
     test_user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD, disabled=True)
@@ -136,6 +140,12 @@ def test_get_current_user_not_found():
         with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):
             _ = get_current_user(session_mock, "token")
 
+def test_get_current_user_optional():
+    assert get_current_user_optional(Mock(), None) is None
+
+    with patch("app.core.security._get_current_user", side_effect=OAuth2PasswordException("invalid_token")):
+        assert get_current_user_optional(Mock(), None) is None
+
 def test_get_current_enabled_user():
      test_user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD + "a1bs")
 
@@ -147,3 +157,9 @@ def test_get_current_enabled_user_disabled():
 
      with pytest.raises(OAuth2PasswordException, check=lambda e: e.error == "invalid_token"):
          _ = get_current_enabled_user(user)
+
+def test_get_current_enabled_user_optional():
+    test_user = User(email=TEST_EMAIL, password_hash=TEST_PASSWORD + "a1bs", disabled=True)
+    
+    assert get_current_enabled_user_optional(test_user) is None
+    assert get_current_enabled_user_optional(None) is None    
