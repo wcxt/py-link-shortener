@@ -42,6 +42,14 @@ def get_token_from_cookie_or_header(header_token: Annotated[str | None, Depends(
             headers={"WWW-Authenticate": "Bearer"},
     )
 
+def get_token_from_cookie_or_header_optional(header_token: Annotated[str | None, Depends(oauth2_scheme)],
+                                             access_token: Annotated[str | None, Cookie()] = None) -> str | None:
+    if access_token:
+        return access_token
+    if header_token:
+        return header_token
+    return None
+
 def get_current_user(session: SessionDep, token: Annotated[str, Depends(get_token_from_cookie_or_header)]) -> User:
     try:
         decoded = decode_access_token(token)
@@ -65,9 +73,37 @@ def get_current_user(session: SessionDep, token: Annotated[str, Depends(get_toke
 
     return user
 
+def get_current_user_optional(session: SessionDep, token: Annotated[str | None, Depends(get_token_from_cookie_or_header_optional)]) -> User | None:
+    if not token:
+        return None
+
+    try:
+        decoded = decode_access_token(token)
+    except jwt.InvalidTokenError:
+        return None
+
+    subject = decoded.get("sub")
+    if subject is None or not isinstance(subject, str):
+        return None
+
+    try:
+        user_id = int(subject)
+    except ValueError:
+        return None
+
+    statement = select(User).where(User.id == user_id)
+    results = session.exec(statement)
+    user = results.first()
+    return user
+
 def get_current_enabled_user(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.disabled:
         raise OAuth2PasswordException("invalid_token", description="User is disabled")
+    return user
+
+def get_current_enabled_user_optional(user: Annotated[User | None, Depends(get_current_user_optional)]) -> User | None:
+    if user and user.disabled:
+        return None
     return user
 
 def authenticate_user(session: Session, email: str, password: str) -> User | None:

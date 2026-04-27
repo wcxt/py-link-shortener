@@ -1,5 +1,5 @@
 const form = document.getElementById('login-form');
-const errorEl = document.getElementsById('error');
+const errorEl = document.getElementById('error');
 const resultEl = document.getElementById('result');
 
 form.addEventListener('submit', async (e) => {
