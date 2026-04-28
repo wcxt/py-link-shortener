@@ -1,9 +1,11 @@
+from re import S
+
 from fastapi.testclient import TestClient
 from pytest import Session
 from sqlmodel import select
 
 from app.core.security import decode_access_token, get_hashed_password, verify_password
-from app.models import User
+from app.models import ShortenedURL, User
 from tests.conftest import TEST_EMAIL, TEST_PASSWORD, TEST_URL
 
 
@@ -19,6 +21,72 @@ def test_create_short_url(client: TestClient):
     assert isinstance(data["short_code"], str)
     assert len(data["short_code"]) == 8 
     assert data["url"] == TEST_URL
+
+def test_create_short_url_persists(session: Session, client: TestClient):
+    response = client.post(
+            "/api/short",
+            json={"url": TEST_URL}
+    )
+    data = response.json()
+    statement = select(ShortenedURL).where(ShortenedURL.code == data["short_code"])
+    short_url = session.exec(statement).first()
+
+    assert short_url is not None
+    assert short_url.url == TEST_URL
+    assert short_url.owner_id is None
+
+def test_create_short_url_authenticated(session: Session, client: TestClient):
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
+    session.add(test_user)
+    session.commit()
+    session.refresh(test_user)
+
+    response = client.post(
+            "/api/token",
+            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
+    )
+    data = response.json()
+    access_token = data["access_token"]
+
+    response = client.post(
+            "/api/short",
+            json={"url": TEST_URL},
+            headers={"Authorization": f"Bearer {access_token}"}
+    )
+    data = response.json()
+
+    assert response.status_code == 201
+    assert data["short_code"] is not None
+    assert isinstance(data["short_code"], str)
+    assert len(data["short_code"]) == 8 
+    assert data["url"] == TEST_URL
+
+def test_create_short_url_authenticated_persists(session: Session, client: TestClient):
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
+    session.add(test_user)
+    session.commit()
+    session.refresh(test_user)
+
+    response = client.post(
+            "/api/token",
+            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
+    )
+    data = response.json()
+    access_token = data["access_token"]
+
+    response = client.post(
+            "/api/short",
+            json={"url": TEST_URL},
+            headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    data = response.json()
+    statement = select(ShortenedURL).where(ShortenedURL.code == data["short_code"])
+    short_url = session.exec(statement).first()
+
+    assert short_url is not None
+    assert short_url.url == TEST_URL
+    assert short_url.owner_id == test_user.id
 
 def test_create_short_url_invalid_input(client: TestClient):
     response = client.post(

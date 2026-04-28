@@ -10,7 +10,7 @@ from sqlmodel import select
 from app.models import ShortenedURL, User
 from app.schemas import AccessTokenPublic, ShortenedURLCreate, ShortenedURLPublic, UserCreate, UserPublic
 from app.core.database import SessionDep
-from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, get_hashed_password
+from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, get_current_enabled_user_optional, get_hashed_password
 from app.core.settings import settings
 
 CODE_MAX_RETRY = 10
@@ -18,10 +18,10 @@ CODE_MAX_RETRY = 10
 router = APIRouter(prefix="/api")
 
 @router.post("/short", status_code=status.HTTP_201_CREATED, response_model=ShortenedURLPublic)
-def create_short_url(body: ShortenedURLCreate, session: SessionDep):
+def create_short_url(body: ShortenedURLCreate, session: SessionDep, current_user: Annotated[User | None, Depends(get_current_enabled_user_optional)]):
     for _ in range(CODE_MAX_RETRY):
         try:
-            short_url_db = ShortenedURL(url=str(body.url))
+            short_url_db = ShortenedURL(url=str(body.url), owner_id=current_user.id if current_user else None)
             session.add(short_url_db)
             session.commit()
             session.refresh(short_url_db)
