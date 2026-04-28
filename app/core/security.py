@@ -43,7 +43,7 @@ def _get_token_from_request(header_token: str | None, access_token: str | None) 
     )
 
 def get_token_from_request(header_token: Annotated[str | None, Depends(oauth2_scheme)],
-                           access_token: Annotated[str | None, Cookie()]) -> str | None:
+                           access_token: Annotated[str | None, Cookie()] = None) -> str | None:
     return _get_token_from_request(header_token, access_token)
 
 def get_token_from_request_optional(header_token: Annotated[str | None, Depends(oauth2_scheme)],

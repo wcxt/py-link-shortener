@@ -10,7 +10,7 @@ from sqlmodel import select
 from app.models import ShortenedURL, User
 from app.schemas import AccessTokenPublic, ShortenedURLCreate, ShortenedURLPublic, UserCreate, UserPublic
 from app.core.database import SessionDep
-from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, get_current_enabled_user_optional, get_hashed_password
+from app.core.security import OAuth2PasswordException, authenticate_user, create_access_token, get_current_enabled_user, get_current_enabled_user_optional, get_hashed_password
 from app.core.settings import settings
 
 CODE_MAX_RETRY = 10
@@ -47,6 +47,10 @@ def create_user(body: UserCreate, session: SessionDep):
     session.refresh(user_db)
 
     return user_db
+
+@router.get("/users/me/links", response_model=list[ShortenedURLPublic])
+def get_user_links(current_user: Annotated[User, Depends(get_current_enabled_user)]):
+    return [{"url": short_link.url, "short_code": short_link.code} for short_link in current_user.shortened_urls]
 
 @router.post("/token", response_model=AccessTokenPublic)
 def create_access_token_from_login(session: SessionDep,

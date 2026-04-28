@@ -152,6 +152,49 @@ def test_create_user_invalid_input(session: Session, client: TestClient):
 
     assert len(users) == 0
 
+def test_get_user_links(session: Session, client: TestClient):
+    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
+    session.add(test_user)
+    session.commit()
+    session.refresh(test_user)
+
+    response = client.post(
+            "/api/token",
+            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
+    )
+    data = response.json()
+    access_token = data["access_token"]
+
+    test_short_url = ShortenedURL(url=TEST_URL, owner_id=test_user.id)
+    test_short_url2 = ShortenedURL(url=TEST_URL + "/2", owner_id=test_user.id)
+    session.add(test_short_url)
+    session.add(test_short_url2)
+    session.commit()
+    session.refresh(test_short_url)
+    session.refresh(test_short_url2)
+
+    response = client.get(
+            "/api/users/me/links",
+            headers={"Authorization": f"Bearer {access_token}"}
+    )
+    data = response.json()
+
+    assert response.status_code == 200
+    assert isinstance(data, list)
+    assert len(data) == 2
+    assert data[0]["url"] == TEST_URL
+    assert data[0]["short_code"] == test_short_url.code
+    assert data[1]["url"] == TEST_URL + "/2"
+    assert data[1]["short_code"] == test_short_url2.code
+
+def test_get_user_links_unauthenticated(client: TestClient):
+    response = client.get("/api/users/me/links")
+    data = response.json()
+
+    assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert data["detail"] is not None
+
 def test_create_access_token_from_login(session: Session, client: TestClient):
     test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
     session.add(test_user)
