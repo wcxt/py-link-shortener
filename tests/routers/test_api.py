@@ -1,10 +1,8 @@
-from re import S
-
 from fastapi.testclient import TestClient
 from pytest import Session
 from sqlmodel import select
 
-from app.core.security import decode_access_token, get_hashed_password, verify_password
+from app.core.security import decode_access_token, verify_password
 from app.models import ShortenedURL, User
 from tests.conftest import TEST_EMAIL, TEST_PASSWORD, TEST_URL
 
@@ -35,23 +33,11 @@ def test_create_short_url_persists(session: Session, client: TestClient):
     assert short_url.url == TEST_URL
     assert short_url.owner_id is None
 
-def test_create_short_url_authenticated(session: Session, client: TestClient):
-    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
-    session.add(test_user)
-    session.commit()
-    session.refresh(test_user)
-
-    response = client.post(
-            "/api/token",
-            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
-    )
-    data = response.json()
-    access_token = data["access_token"]
-
+def test_create_short_url_authenticated(client: TestClient, auth: dict):
     response = client.post(
             "/api/short",
             json={"url": TEST_URL},
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers={"Authorization": f"Bearer {auth['token']}"}
     )
     data = response.json()
 
@@ -61,23 +47,11 @@ def test_create_short_url_authenticated(session: Session, client: TestClient):
     assert len(data["short_code"]) == 8 
     assert data["url"] == TEST_URL
 
-def test_create_short_url_authenticated_persists(session: Session, client: TestClient):
-    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
-    session.add(test_user)
-    session.commit()
-    session.refresh(test_user)
-
-    response = client.post(
-            "/api/token",
-            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
-    )
-    data = response.json()
-    access_token = data["access_token"]
-
+def test_create_short_url_authenticated_persists(session: Session, client: TestClient, auth: dict):
     response = client.post(
             "/api/short",
             json={"url": TEST_URL},
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers={"Authorization": f"Bearer {auth['token']}"}
     )
 
     data = response.json()
@@ -86,14 +60,13 @@ def test_create_short_url_authenticated_persists(session: Session, client: TestC
 
     assert short_url is not None
     assert short_url.url == TEST_URL
-    assert short_url.owner_id == test_user.id
+    assert short_url.owner_id == auth["user"].id
 
 def test_create_short_url_invalid_input(client: TestClient):
     response = client.post(
             "/api/short",
             json={}
     )
-    data = response.json()
 
     assert response.status_code == 422
 
@@ -118,11 +91,7 @@ def test_create_user(session: Session, client: TestClient):
     assert user.disabled == False
     assert verify_password(TEST_PASSWORD, user.password_hash)
 
-def test_create_user_exists(session: Session, client: TestClient):
-    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
-    session.add(test_user)
-    session.commit()
-    
+def test_create_user_exists(session: Session, client: TestClient, user: User):
     response = client.post(
             "/api/users",
             json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
@@ -143,8 +112,6 @@ def test_create_user_invalid_input(session: Session, client: TestClient):
             "/api/users",
             json={}
     )
-    data = response.json()
-
     assert response.status_code == 422
     
     statement = select(User)
@@ -152,21 +119,9 @@ def test_create_user_invalid_input(session: Session, client: TestClient):
 
     assert len(users) == 0
 
-def test_get_user_links(session: Session, client: TestClient):
-    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
-    session.add(test_user)
-    session.commit()
-    session.refresh(test_user)
-
-    response = client.post(
-            "/api/token",
-            data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
-    )
-    data = response.json()
-    access_token = data["access_token"]
-
-    test_short_url = ShortenedURL(url=TEST_URL, owner_id=test_user.id)
-    test_short_url2 = ShortenedURL(url=TEST_URL + "/2", owner_id=test_user.id)
+def test_get_user_links(session: Session, client: TestClient, auth: dict):
+    test_short_url = ShortenedURL(url=TEST_URL, owner_id=auth["user"].id)
+    test_short_url2 = ShortenedURL(url=TEST_URL + "/2", owner_id=auth["user"].id)
     session.add(test_short_url)
     session.add(test_short_url2)
     session.commit()
@@ -175,7 +130,7 @@ def test_get_user_links(session: Session, client: TestClient):
 
     response = client.get(
             "/api/users/me/links",
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers={"Authorization": f"Bearer {auth['token']}"}
     )
     data = response.json()
 
@@ -195,12 +150,7 @@ def test_get_user_links_unauthenticated(client: TestClient):
     assert response.headers["WWW-Authenticate"] == "Bearer"
     assert data["detail"] is not None
 
-def test_create_access_token_from_login(session: Session, client: TestClient):
-    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
-    session.add(test_user)
-    session.commit()
-    session.refresh(test_user)
-
+def test_create_access_token_from_login(client: TestClient, user: User):
     response = client.post(
             "/api/token",
             data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD}
@@ -215,17 +165,12 @@ def test_create_access_token_from_login(session: Session, client: TestClient):
 
     decoded = decode_access_token(data["access_token"])
 
-    assert decoded["sub"] == str(test_user.id)
+    assert decoded["sub"] == str(user.id)
     assert decoded["exp"] is not None
     assert isinstance(decoded["exp"], int)
     assert decoded["exp"] > 0
 
-def test_create_access_token_from_login_with_cookie(session: Session, client: TestClient):
-    test_user = User(email=TEST_EMAIL, password_hash=get_hashed_password(TEST_PASSWORD))
-    session.add(test_user)
-    session.commit()
-    session.refresh(test_user)
-
+def test_create_access_token_from_login_with_cookie(client: TestClient, user: User):
     response = client.post(
             "/api/token",
             data={"grant_type": "password", "username": TEST_EMAIL, "password": TEST_PASSWORD, "client_type": "web"},
