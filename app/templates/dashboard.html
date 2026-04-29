@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - URL Shortener{% endblock %}
+
+{% block styles %}
+.content h1 {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.content .url-list {
+    width: 100%;
+    max-width: 900px;
+}
+
+.content .url-item {
+    background: var(--card);
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--green);
+}
+
+.content .url-item .url-section {
+    margin-bottom: 15px;
+}
+
+.content .url-item .url-section:last-child {
+    margin-bottom: 0;
+}
+
+.content .url-item .url-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.content .url-item .short-url-box {
+    background: rgba(76, 175, 80, 0.05);
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.content .url-item .short-url-box a {
+    text-decoration: none;
+    color: var(--green);
+    font-weight: 600;
+    word-break: break-all;
+    flex: 1;
+}
+
+.content .url-item .short-url-box a:hover {
+    text-decoration: underline;
+}
+
+
+.content .url-item .arrow {
+    text-align: center;
+    color: #999;
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+.content .url-item .original-url-box {
+    background: #f9f9f9;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+}
+
+.content .url-item .original-url-box a {
+    color: var(--text);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.content .url-item .original-url-box a:hover {
+    text-decoration: underline;
+}
+
+.content .no-urls {
+    text-align: center;
+    color: var(--text);
+    font-style: italic;
+    padding: 40px;
+}
+{% endblock %}
+
+{% block content %}
+<h1>Your Shortened URLs</h1>
+<div class="url-list">
+{% if current_user.shortened_urls %}
+    {% for shortened_url in current_user.shortened_urls %}
+    <div class="url-item">
+        <div class="url-section">
+            <div class="url-label">Shortened URL</div>
+            <div class="short-url-box">
+                <a href="/{{ shortened_url.code }}" target="_blank">{{ request.base_url }}{{ shortened_url.code }}</a>
+            </div>
+        </div>
+        <div class="arrow">↓ redirects to ↓</div>
+        <div class="url-section">
+            <div class="url-label">Original URL</div>
+            <div class="original-url-box">
+                <a href="{{ shortened_url.url }}" target="_blank">{{ shortened_url.url }}</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="no-urls">You haven't shortened any URLs yet.</p>
+{% endif %}
+</div>
+{% endblock %}
