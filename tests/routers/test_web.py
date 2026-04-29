@@ -39,3 +39,18 @@ def test_read_login(client: TestClient):
 
     assert response.status_code == 200 
     assert "text/html" in response.headers["content-type"]
+
+def test_read_dashboard(client: TestClient, auth: dict):
+    response = client.get("/dashboard", headers={"Authorization": f"Bearer {auth['token']}"})
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+def test_read_dashboard_unauthenticated(client: TestClient):
+    response = client.get("/dashboard")
+
+    data = response.json()
+
+    assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert data["detail"] is not None

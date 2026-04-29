@@ -6,7 +6,7 @@ from fastapi import status
 from sqlmodel import select
 
 from app.core.database import SessionDep
-from app.core.security import get_current_enabled_user_optional
+from app.core.security import get_current_enabled_user, get_current_enabled_user_optional
 from app.models import ShortenedURL, User
 from app.core.settings import templates
 
@@ -23,6 +23,10 @@ def read_register(request: Request, current_user: Annotated[User | None, Depends
 @router.get("/login", response_class=HTMLResponse)
 def read_login(request: Request, current_user: Annotated[User | None, Depends(get_current_enabled_user_optional)]):
     return templates.TemplateResponse(request=request, name="login.html", context={"current_user": current_user})
+
+@router.get("/dashboard", response_class=HTMLResponse)
+def read_dashboard(request: Request, current_user: Annotated[User, Depends(get_current_enabled_user)]):
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"current_user": current_user})
 
 @router.get("/{code}", response_class=RedirectResponse, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 def redirect_code(request: Request, code: str, session: SessionDep):

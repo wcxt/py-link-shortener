@@ -1,5 +1,5 @@
 from nanoid import generate
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 CODE_SIZE=8
 
@@ -9,6 +9,8 @@ class User(SQLModel, table=True):
     password_hash: str = Field(max_length=255)
     disabled: bool = Field(default=False)
 
+    shortened_urls: list["ShortenedURL"] = Relationship(back_populates="owner")
+
 def generate_code():
     return generate(size=CODE_SIZE)
 
@@ -16,3 +18,6 @@ class ShortenedURL(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     code: str = Field(default_factory=generate_code, max_length=CODE_SIZE, unique=True, index=True)
     url: str = Field(max_length=2048)
+
+    owner_id: int | None = Field(default=None, foreign_key="user.id")
+    owner: User | None = Relationship(back_populates="shortened_urls")
