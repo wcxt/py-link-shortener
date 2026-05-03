@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: py-link-shortener-app
     ports:
       - "8000:8000"
     env_file: .env
@@ -10,7 +11,8 @@ services:
       migrate:
         condition: service_completed_successfully
   migrate:
-    build: .
+    image: py-link-shortener-app
+    pull_policy: never
     command: alembic upgrade head
     env_file: .env
     environment:
