@@ -7,7 +7,22 @@ services:
     environment:
       - POSTGRES_HOST=db
     depends_on:
-      - db
+      migrate:
+        condition: service_completed_successfully
+  migrate:
+    build: .
+    command: alembic upgrade head
+    env_file: .env
+    environment:
+      - POSTGRES_HOST=db
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
   db:
     image: postgres:18.3
     env_file: .env
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 1s
+      timeout: 10s
