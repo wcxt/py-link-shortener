@@ -1,5 +1,5 @@
 from fastapi.templating import Jinja2Templates
-from pydantic import Field, PostgresDsn, field_validator
+from pydantic import Field, PostgresDsn, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -8,16 +8,22 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, ge=0)
     cookie_secure: bool = True
 
-    postgres_url: PostgresDsn
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_user: str = "postgres"
+    postgres_password: str = "postgres"
+    postgres_db: str = "postgres"
 
-    @field_validator("postgres_url", mode='after')
-    @classmethod
-    def is_db(cls, postgres_url: PostgresDsn):
-        path = postgres_url.path or ""
-        db_name = path.lstrip("/")
-        if not db_name:
-            raise ValueError("Postgres URL must include a database name")
-        return postgres_url
+    @property
+    def postgres_url(self) -> PostgresDsn:
+        return PostgresDsn.build(
+            scheme="postgresql+psycopg2",
+            host=self.postgres_host,
+            port=self.postgres_port,
+            username=self.postgres_user,
+            password=self.postgres_password,
+            path=self.postgres_db
+        )
 
     model_config = SettingsConfigDict(env_file=".env") # pyright: ignore[reportUnannotatedClassAttribute]
 
