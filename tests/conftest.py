@@ -3,6 +3,7 @@ from sqlmodel import SQLModel, Session, create_engine
 import pytest
 from app.core.database import get_session
 from app.core.security import get_hashed_password
+from app.core.middleware import clients
 from app.main import app
 from app.models import User
 
@@ -59,5 +60,7 @@ def auth_fixture(client: TestClient, user: User):
     data = response.json()
     return {"user": user, "token": data["access_token"]}
 
-    
+@pytest.fixture(autouse=True)
+def clear_rate_limit_clients():
+    clients.clear()
 
