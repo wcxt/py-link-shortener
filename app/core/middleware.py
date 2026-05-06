@@ -18,7 +18,6 @@ clients: dict[str, list] = {}
 async def rate_limit_middleware(request: Request, call_next):
         ip = request.client.host
         now = time.time()
-        print(f"Received request from {ip} to {request.url.path} with method {request.method}")
         rate_limit, window_duration = get_rate_limit_parameters(request.url.path, request.method)
 
         if ip not in clients:
