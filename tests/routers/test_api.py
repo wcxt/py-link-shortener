@@ -19,6 +19,21 @@ def test_create_short_url(client: TestClient):
     assert isinstance(data["short_code"], str)
     assert len(data["short_code"]) == 8 
     assert data["url"] == TEST_URL
+    assert data["expires_at"] is None
+
+def test_create_short_url_with_expiration(client: TestClient):
+    response = client.post(
+            "/api/short",
+            json={"url": TEST_URL, "expires_at": "2030-01-01"}
+    )
+    data = response.json()
+
+    assert response.status_code == 201
+    assert data["short_code"] is not None
+    assert isinstance(data["short_code"], str)
+    assert len(data["short_code"]) == 8
+    assert data["url"] == TEST_URL
+    assert data["expires_at"].startswith("2030-01-01")
 
 def test_create_short_url_persists(session: Session, client: TestClient):
     response = client.post(

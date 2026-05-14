@@ -21,11 +21,11 @@ router = APIRouter(prefix="/api")
 def create_short_url(body: ShortenedURLCreate, session: SessionDep, current_user: Annotated[User | None, Depends(get_current_enabled_user_optional)]):
     for _ in range(CODE_MAX_RETRY):
         try:
-            short_url_db = ShortenedURL(url=str(body.url), owner_id=current_user.id if current_user else None)
+            short_url_db = ShortenedURL(url=str(body.url), owner_id=current_user.id if current_user else None, expires_at=body.expires_at)
             session.add(short_url_db)
             session.commit()
             session.refresh(short_url_db)
-            return {"url": short_url_db.url, "short_code": short_url_db.code}
+            return {"url": short_url_db.url, "short_code": short_url_db.code, "expires_at": short_url_db.expires_at}
         except IntegrityError:
             session.rollback()
 

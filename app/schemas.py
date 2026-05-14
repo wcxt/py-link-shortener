@@ -1,11 +1,13 @@
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, EmailStr, Field, FutureDatetime, HttpUrl
 
 class ShortenedURLCreate(BaseModel):
     url: HttpUrl
+    expires_at: FutureDatetime | None = None
 
 class ShortenedURLPublic(BaseModel):
     url: HttpUrl
     short_code: str
+    expires_at: FutureDatetime | None = None
 
 class UserCreate(BaseModel):
     email: EmailStr = Field(max_length=255)
