@@ -1,5 +1,7 @@
+from datetime import datetime
+
 from nanoid import generate
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, DateTime
 
 CODE_SIZE=8
 
@@ -18,6 +20,7 @@ class ShortenedURL(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     code: str = Field(default_factory=generate_code, max_length=CODE_SIZE, unique=True, index=True)
     url: str = Field(max_length=2048)
+    expires_at: datetime | None = Field(default=None)
 
     owner_id: int | None = Field(default=None, foreign_key="user.id")
     owner: User | None = Relationship(back_populates="shortened_urls")
