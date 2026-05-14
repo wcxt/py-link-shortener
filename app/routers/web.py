@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi import status
 from sqlmodel import select
+from starlette.status import HTTP_410_GONE
 
 from app.core.database import SessionDep
 from app.core.security import get_current_enabled_user, get_current_enabled_user_optional
@@ -36,5 +38,9 @@ def redirect_code(request: Request, code: str, session: SessionDep):
     if not shortened_url:
         return templates.TemplateResponse(request=request, name="404.html",
                                           status_code=status.HTTP_404_NOT_FOUND)
+    
+    if shortened_url.expires_at and shortened_url.expires_at < datetime.now(timezone.utc):
+        return templates.TemplateResponse(request=request, name="link_expired.html",
+                                          status_code=status.HTTP_410_GONE)
 
     return shortened_url.url
